@@ -45,47 +45,74 @@ enum Tab: CaseIterable {
 }
 
 struct ContentView: View {
+    @State var selItem: String = ""
     @State var selectTab: Tab = .all
+    @State var isBottomTabShow: Bool = true
+    @State var isViewShow: Bool = false
+    
     @Environment(\.colorScheme) private var scheme
+    @Namespace var nspace
     
     var body: some View {
-        VStack {
-            HStack {
-                Image(systemName: "line.3.horizontal.decrease")
-                    .imageScale(.medium)
-                    .foregroundStyle(.black)
-                    .font(.title3.weight(.medium))
+        ZStack {
+            VStack {
+                HStack {
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .imageScale(.medium)
+                        .foregroundStyle(.black)
+                        .font(.title3.weight(.medium))
+                    
+                    Text("Message")
+                        .font(.title2.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                    
+                    Image(systemName: "bell.badge")
+                        .imageScale(.medium)
+                        .foregroundStyle(.black)
+                        .font(.title3.weight(.medium))
+                        .symbolVariant(.fill)
+                }
+                .padding(.horizontal)
+                .padding(.top, 10)
+                customtabBar()
                 
-                Text("Message")
-                    .font(.title2.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                
-                Image(systemName: "bell.badge")
-                    .imageScale(.medium)
-                    .foregroundStyle(.black)
-                    .font(.title3.weight(.medium))
-                    .symbolVariant(.fill)
-            }
-            .padding(.horizontal)
-            .padding(.top, 10)
-            customtabBar()
-            
-            TabView(selection: $selectTab) {
-                ForEach(Tab.allCases, id: \.self) { type in
-                    switch type {
-                    case .all:
-                        customtabBar(color: .purple)
-                    case .share:
-                        customtabBar(color: .red)
-                    case .header:
-                        customtabBar(color: .green)
+                TabView(selection: $selectTab) {
+                    ForEach(Tab.allCases, id: \.self) { type in
+                        switch type {
+                        case .all:
+                            customtabBar(tab: type.name, color: .purple)
+                        case .share:
+                            customtabBar(tab: type.name, color: .red)
+                        case .header:
+                            customtabBar(tab: type.name, color: .green)
+                        }
                     }
                 }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .ignoresSafeArea(.all)
             }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .frame(maxHeight: .infinity, alignment: .top)
+            .background(.gray.opacity(0.1))
+            .overlay(alignment: .bottom) {
+                TabBarView()
+                    .offset(y: isBottomTabShow ? 0 : 100)
+                    .opacity(isBottomTabShow ? 1 : 0)
+                    .animation(.default, value: isBottomTabShow)
+            }
+            
+            if isViewShow {
+                Rectangle()
+                    .fill(.red)
+                    .ignoresSafeArea(.all)
+                    .matchedGeometryEffect(id: selItem, in: nspace)
+                    .onTapGesture {
+                        withAnimation {
+                            isViewShow.toggle()
+                            isBottomTabShow = true
+                        }
+                    }
+            }
         }
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(.gray.opacity(0.1))
     }
     
     @ViewBuilder
@@ -124,13 +151,39 @@ struct ContentView: View {
     }
     
     @ViewBuilder
-    func customtabBar(color: Color) -> some View {
+    func customtabBar(tab: String, color: Color) -> some View {
         ScrollView(showsIndicators: false) {
             LazyVGrid(columns: Array(repeating: GridItem(), count: 2), content: {
-                ForEach(1...20, id: \.self) { _ in
+                ForEach(1...20, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 15)
                         .fill(color.gradient)
                         .frame(height: 150)
+                        .matchedGeometryEffect(id: "rect_\(tab)_\(index)", in: nspace)
+                        .onTapGesture {
+                            withAnimation(.default) {
+                                self.selItem = "rect_\(tab)_\(index)"
+                                self.isBottomTabShow = false
+                                self.isViewShow.toggle()
+                            }
+                        }
+                        .overlay(alignment: .leading) {
+                            VStack(alignment: .leading) {
+                                Circle()
+                                    .fill(.white.opacity(0.2))
+                                    .frame(width: 50)
+                                Rectangle()
+                                    .fill(.white.opacity(0.2))
+                                    .frame(width: 100,height: 10)
+                                
+                                Rectangle()
+                                    .fill(.white.opacity(0.2))
+                                    .frame(width: 80,height: 10)
+                                Rectangle()
+                                    .fill(.white.opacity(0.2))
+                                    .frame(width: 60,height: 10)
+                            }
+                            .padding(.leading)
+                        }
                 }
             })
             .padding(15)
@@ -139,6 +192,37 @@ struct ContentView: View {
                 print(value)
             }
         }
+    }
+}
+
+struct TabBarView: View {
+    @State var selTab = 1
+    
+    var body: some View {
+        HStack {
+            ForEach(1...4, id: \.self) { item in
+                Button {
+                    selTab = item
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: "heart")
+                            .font(.title3.weight(.medium))
+                        Text("HA\(item)")
+                            .font(.caption2)
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .symbolVariant(selTab == item ? .fill : .none)
+                    .foregroundStyle(selTab == item ? .red : .secondary)
+                    .scaleEffect(CGSize(width: selTab == item ? 1.2 : 1.0, height: selTab == item ? 1.2 : 1.0))
+                }
+            }
+        }
+        .frame(height: 72)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 30))
+        .padding(.horizontal, 28)
+        .shadow(radius: 5)
     }
 }
 
